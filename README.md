@@ -1,7 +1,3 @@
-Here’s an upgraded **fancy README.md** with enhanced visuals, badges, and structure, inspired by the knowledge base resources :
-
----
-
 # 🧠 Multimodal Coding Lab (LLM-Powered)  
 **A cross-platform toolkit for qualitative research via LLM-driven analysis, using `ik_llama.cpp` (a high-performance Llama.cpp fork)**  
 
