@@ -23,7 +23,7 @@ Built with:
 <details>  
   <summary>Expand to view phases</summary>  
   <ul>  
-    <li>✅ Phase 1: Compile <code>ik_llama.cpp</code> with GPU support </li>  
+    <li>✅ Phase 1: Compile <code>ik_llama.cpp</code></li>  
     <li>✅ Phase 2: Select and test GGUF models for research/code/translation</li>  
     <li>🚧 Phase 3: Implement web-scraping modules for real-time data retrieval</li>  
     <li>🏗️ Phase 4: Build Tkinter UI with model selection dropdowns</li>  
