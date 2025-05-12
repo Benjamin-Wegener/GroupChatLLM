@@ -13,9 +13,9 @@ A lightweight, AI-powered lab for:
 - 🖥️ Cross-platform Tkinter UI (Windows/Linux)  
 
 Built with:  
-- [`ik_llama.cpp`](https://github.com/ggerganov/llama.cpp) for GPU-accelerated local inference  
+- [ik_llama.cpp](https://github.com/ikawrakow/ik_llama.cpp)
 - Python 3.12+ and Tkinter (no browser dependencies)  
-- Lightweight GGUF models (e.g., `Llama-3-Chinese-8B-Instruct-GGUF`)  
+- Lightweight GGUF models (e.g., `Bitnet, Qwen3, DeepSeek...`)  
 
 ---
 
@@ -67,7 +67,7 @@ Contributions are welcome!
 
 For major changes, open an issue first to discuss the scope.  
 
-[![](https://img.shields.io/badge/contributions-welcome-brightgreen?style=flat)](https://github.com/benjaminwegenar/multimodal-lab/issues)  
+[![](https://img.shields.io/badge/contributions-welcome-brightgreen?style=flat)](issues)  
 
 ---
 
