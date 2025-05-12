@@ -71,13 +71,6 @@ For major changes, open an issue first to discuss the scope.
 
 ---
 
-## 📬 **Contact**  
-Benjamin Wegener  
-📧 benjamin.wegener@example.com  
-🔗 [GitHub Profile](https://github.com/benjaminwegenar)  
-
----
-
 ### ✨ **Inspiration**  
 - Fancy README templates from [ZQ.Yu](https://github.com/ZQPei)  and [Awesome GitHub README Collection](https://awesome-github-readme-profile.netlify.app) .  
 - Structured documentation principles from [Best-README-Template](https://gitee.com/Best-README-Template) .  
@@ -88,6 +81,3 @@ Benjamin Wegener
 - `ik_llama.cpp` compilation guide: [llama.cpp GitHub](https://github.com/ggerganov/llama.cpp)  
 - GGUF model quantization: [Phil Schmid's guide](https://www.philschmid.de/llama-cpp)  
 
----
-
-Let me know if you'd like to add animations, GitHub stats, or social media links! 
