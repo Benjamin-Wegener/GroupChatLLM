@@ -1,0 +1,3 @@
+[submodule "ik_llama.cpp"]
+	path = ik_llama.cpp
+	url = https://github.com/ikawrakow/ik_llama.cpp
