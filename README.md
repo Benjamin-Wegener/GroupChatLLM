@@ -1,4 +1,4 @@
-# 🧠 Multimodal Coding Lab (LLM-Powered)  
+# 🧠 GroupChatLLM
 **A cross-platform toolkit for qualitative research via LLM-driven analysis, using `ik_llama.cpp` (a high-performance Llama.cpp fork)**  
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue) ![Python](https://img.shields.io/badge/python-3.12+-green) ![Tkinter](https://img.shields.io/badge/tkinter-UI-blueviolet)  
