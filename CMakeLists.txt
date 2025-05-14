@@ -44,4 +44,4 @@ message(STATUS "🔧 Adding submodule ik_llama.cpp")
 set(LLAMA_BUILD_SERVER ON CACHE BOOL "Build llama-server" FORCE)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
 
-add_subdirectory(ik_llama)
+add_subdirectory(ik_llama.cpp)
