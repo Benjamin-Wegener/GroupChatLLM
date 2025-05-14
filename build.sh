@@ -59,11 +59,13 @@ cleanup_previous() {
 
   if mountpoint -q "$CHROOT_DIR/mnt/project"; then
     log_warn "🧹 Forcing unmount of previous project bind mount..."
-    sudo umount -l "$CHROOT_DIR/mnt/project" || log_error "Failed to unmount"
+    sudo umount -l "$CHROOT_DIR/mnt/project" || log_error "❌ Failed to unmount"
+    sync && sleep 1
   fi
 
   if [[ -d "$CHROOT_DIR" ]]; then
     log_warn "🗑️ Removing old chroot directory: $CHROOT_DIR"
+    sync && sleep 1  # Give kernel a moment to flush and finalize unmount
     sudo rm -rf "$CHROOT_DIR"
   fi
 
@@ -122,17 +124,23 @@ for TARGET in "${!TARGETS[@]}"; do
       sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y cmake build-essential git"
       ;;
     *)
-      log_error "Unknown target: $TARGET"
+      log_error "❌ Unknown target: $TARGET"
       exit 1
       ;;
   esac
 
   log_info "⚙️ Running build inside chroot..."
   sudo chroot "$CHROOT_DIR" /tmp/build_inside.sh "$TARGET"
+  BUILD_STATUS=$?
+  if [[ $BUILD_STATUS -ne 0 ]]; then
+    log_error "❌ Build failed for target: $TARGET"
+    exit $BUILD_STATUS
+  fi
 
   if [[ $DEBUG_MODE -eq 0 ]]; then
     log_info "🧹 Cleaning up mount..."
-    sudo umount "$CHROOT_DIR/mnt/project"
+    sudo umount -l "$CHROOT_DIR/mnt/project"
+    sync && sleep 1
   else
     log_warn "🐞 Debug mode: Skipping mount unmount"
   fi
