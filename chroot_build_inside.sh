@@ -23,7 +23,8 @@ case "$TARGET" in
     CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ cmake ../ik_llama.cpp $CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=../ik_llama.cpp/cmake/toolchains/mingw64.cmake
     ;;
   cross-aarch64)
-    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake ../ik_llama.cpp $CMAKE_ARGS
+    # Added ARM optimization flags for ARMv8.2-A with dot product and fp16 support
+    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake ../ik_llama.cpp $CMAKE_ARGS -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16"
     ;;
   native)
     cmake ../ik_llama.cpp $CMAKE_ARGS
@@ -35,3 +36,36 @@ case "$TARGET" in
 esac
 
 make -j$(nproc)
+
+# Make sure the server actually got built
+echo "Checking for llama-server binary..."
+if [ "$TARGET" = "cross-mingw64" ]; then
+  # Check for Windows executable extension
+  SERVER_PATH="bin/llama-server.exe"
+else
+  SERVER_PATH="bin/llama-server"
+fi
+
+if [ ! -f "$SERVER_PATH" ]; then
+  echo "Server binary not found at expected path: $SERVER_PATH"
+  # Try building the server specifically
+  echo "Attempting to build server explicitly..."
+  make -j$(nproc) server
+  # List server folder contents for debugging
+  echo "Contents of bin directory:"
+  ls -la bin/
+  # Check alternative paths
+  ALTERNATE_PATHS=("bin/server" "server/llama-server" "server/server")
+  for path in "${ALTERNATE_PATHS[@]}"; do
+    if [ -f "$path" ]; then
+      echo "Found server at: $path"
+      # Create a symlink to ensure it can be found by the expected name
+      mkdir -p bin
+      ln -sf "../$path" "bin/llama-server"
+      break
+    fi
+  done
+fi
+
+echo "Final bin directory contents:"
+ls -la bin/
