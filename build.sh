@@ -25,22 +25,18 @@ CHROOT_DIR="$HOME/groupchatllm-chroot"
 TARGET_DIR="$HOME/GroupChatLLM"
 DISTRO="bookworm"
 
-# Map internal targets to Debian architectures
+# Map internal targets to Debian architectures (x64 and ARM64 only)
 declare -A TARGETS=(
   ["native"]="amd64"
   ["cross-aarch64"]="arm64"
-  ["cross-i386"]="i386"
   ["cross-mingw64"]="amd64"
-  ["cross-mingw32"]="i386"
 )
 
 # Friendly names for logs
 declare -A FRIENDLY_NAMES=(
   ["native"]="Native x86_64 Linux"
   ["cross-aarch64"]="ARM64 Linux"
-  ["cross-i386"]="32-bit i386 Linux"
   ["cross-mingw64"]="Windows x86_64"
-  ["cross-mingw32"]="Windows i686 (32-bit)"
 )
 
 # Optional debug mode
@@ -111,14 +107,11 @@ for TARGET in "${!TARGETS[@]}"; do
 
   log_info "📦 Installing dependencies..."
   case "$TARGET" in
-    cross-mingw64|cross-mingw32)
+    cross-mingw64)
       sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y mingw-w64 cmake build-essential git"
       ;;
     cross-aarch64)
       sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y crossbuild-essential-arm64 cmake build-essential git"
-      ;;
-    cross-i386)
-      sudo chroot "$CHROOT_DIR" bash -c "dpkg --add-architecture i386 && apt update && apt install -y crossbuild-essential-i386 cmake build-essential git"
       ;;
     native)
       sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y cmake build-essential git"
