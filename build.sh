@@ -156,35 +156,44 @@ for TARGET in "${!TARGETS[@]}"; do
   OUTPUT_DIR="./bin/$TARGET"
   mkdir -p "$OUTPUT_DIR"
   
-  # Find the server binary - could be in different locations
-  SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "llama-server*" -type f -executable 2>/dev/null || echo "")
+  # Try more specific server binary locations first with better error handling
+  SERVER_BIN=""
+  POSSIBLE_PATHS=(
+    "$CHROOT_DIR/mnt/project/build-$TARGET/bin/llama-server"
+    "$CHROOT_DIR/mnt/project/build-$TARGET/bin/server"
+    "$CHROOT_DIR/mnt/project/build-$TARGET/server/llama-server"
+    "$CHROOT_DIR/mnt/project/build-$TARGET/server/server"
+  )
   
-  if [[ -z "$SERVER_BIN" ]]; then
-    log_warn "⚠️ Could not find the server binary in build-$TARGET, checking alternatives..."
-    # Check in the typical locations
-    POSSIBLE_PATHS=(
-      "$CHROOT_DIR/mnt/project/build-$TARGET/bin/server"
-      "$CHROOT_DIR/mnt/project/build-$TARGET/server"
-      "$CHROOT_DIR/mnt/project/build-$TARGET/server/llama-server"
-      "$CHROOT_DIR/mnt/project/build-$TARGET/llama-server"
-    )
-    
-    for path in "${POSSIBLE_PATHS[@]}"; do
-      if [[ -f "$path" ]]; then
-        SERVER_BIN="$path"
-        log_info "🔍 Found server binary at: $SERVER_BIN"
-        break
-      fi
-    done
+  # Check Windows binary path separately
+  if [[ "$TARGET" == "cross-mingw64" ]]; then
+    POSSIBLE_PATHS+=("$CHROOT_DIR/mnt/project/build-$TARGET/bin/llama-server.exe")
   fi
   
+  # Try to find the binary in the known locations
+  for path in "${POSSIBLE_PATHS[@]}"; do
+    if [[ -f "$path" ]]; then
+      SERVER_BIN="$path"
+      log_info "🔍 Found server binary at: $path"
+      break
+    fi
+  done
+  
+  # If not found in expected locations, do a broader search
   if [[ -z "$SERVER_BIN" ]]; then
-    log_error "❌ Could not find llama-server binary. Build may have succeeded but binary is missing."
-    exit 1
+    log_warn "⚠️ Server binary not found in expected locations, performing broader search..."
+    SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "llama-server*" -type f -executable 2>/dev/null || echo "")
+    
+    if [[ -n "$SERVER_BIN" ]]; then
+      log_info "🔍 Found server binary at: $SERVER_BIN"
+    else
+      log_error "❌ Could not find llama-server binary. Build may have succeeded but binary is missing."
+      exit 1
+    fi
   fi
   
   sudo cp "$SERVER_BIN" "$OUTPUT_DIR/$BIN_NAME"
-  chmod +x "$OUTPUT_DIR/$BIN_NAME"
+  sudo chmod +x "$OUTPUT_DIR/$BIN_NAME"
 
   log_success "📦 Binary available at: $OUTPUT_DIR/$BIN_NAME"
 done
