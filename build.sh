@@ -75,9 +75,9 @@ read -p "🚀 Continue? (y/N) " -n 1 -r
 echo
 [[ ! $REPLY =~ ^[Yy]$ ]] && echo "🚫 Aborted." && exit 1
 
-log_info "🛠️ Installing host tools (debootstrap, schroot)..."
+log_info "🛠️ Installing host tools (debootstrap, schroot, qemu)..."
 sudo apt update
-sudo apt install -y debootstrap schroot
+sudo apt install -y debootstrap schroot qemu-user-static binfmt-support
 
 for TARGET in "${!TARGETS[@]}"; do
   DEB_ARCH="${TARGETS[$TARGET]}"
@@ -88,9 +88,31 @@ for TARGET in "${!TARGETS[@]}"; do
   if [[ $DEBUG_MODE -eq 0 ]]; then
     cleanup_previous
     log_info "🏡 Creating chroot for $DEB_ARCH..."
+    
+    # Setup QEMU for ARM64 if needed
+    if [[ "$DEB_ARCH" == "arm64" ]]; then
+      log_info "🔄 Setting up QEMU for ARM64 emulation..."
+      sudo mkdir -p "$CHROOT_DIR/usr/bin"
+      sudo cp /usr/bin/qemu-aarch64-static "$CHROOT_DIR/usr/bin/" || {
+        log_error "❌ Failed to copy qemu-aarch64-static. Is qemu-user-static installed?"
+        exit 1
+      }
+    fi
+    
     sudo debootstrap --arch=$DEB_ARCH $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
   elif [[ ! -d "$CHROOT_DIR" ]]; then
     log_info "📦 Creating new chroot (debug mode)"
+    
+    # Setup QEMU for ARM64 if needed
+    if [[ "$DEB_ARCH" == "arm64" ]]; then
+      log_info "🔄 Setting up QEMU for ARM64 emulation..."
+      sudo mkdir -p "$CHROOT_DIR/usr/bin"
+      sudo cp /usr/bin/qemu-aarch64-static "$CHROOT_DIR/usr/bin/" || {
+        log_error "❌ Failed to copy qemu-aarch64-static. Is qemu-user-static installed?"
+        exit 1
+      }
+    fi
+    
     sudo debootstrap --arch=$DEB_ARCH $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
   fi
 
