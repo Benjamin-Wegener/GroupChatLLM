@@ -85,39 +85,34 @@ for TARGET in "${!TARGETS[@]}"; do
 
   log_info "🏗️ Building: $TARGET ($FRIENDLY_NAME)"
 
-  if [[ $DEBUG_MODE -eq 0 ]]; then
-    cleanup_previous
-    log_info "🏡 Creating chroot for $DEB_ARCH..."
+  cleanup_previous
+  log_info "🏡 Creating chroot for $DEB_ARCH..."
+  
+  if [[ "$DEB_ARCH" == "arm64" ]]; then
+    log_info "🔄 Setting up QEMU for ARM64 emulation..."
+    # Enable binfmt support
+    sudo systemctl restart systemd-binfmt.service
     
-    # Setup QEMU for ARM64 if needed
-    if [[ "$DEB_ARCH" == "arm64" ]]; then
-      log_info "🔄 Setting up QEMU for ARM64 emulation..."
-      sudo mkdir -p "$CHROOT_DIR/usr/bin"
-      sudo cp /usr/bin/qemu-aarch64-static "$CHROOT_DIR/usr/bin/" || {
-        log_error "❌ Failed to copy qemu-aarch64-static. Is qemu-user-static installed?"
-        exit 1
-      }
-    fi
+    # Use --foreign mode for initial stage
+    sudo debootstrap --arch=$DEB_ARCH --foreign $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
     
-    sudo debootstrap --arch=$DEB_ARCH $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
-  elif [[ ! -d "$CHROOT_DIR" ]]; then
-    log_info "📦 Creating new chroot (debug mode)"
+    # Copy qemu binary inside chroot
+    sudo mkdir -p "$CHROOT_DIR/usr/bin"
+    sudo cp /usr/bin/qemu-aarch64-static "$CHROOT_DIR/usr/bin/" || {
+      log_error "❌ Failed to copy qemu-aarch64-static. Is qemu-user-static installed?"
+      exit 1
+    }
     
-    # Setup QEMU for ARM64 if needed
-    if [[ "$DEB_ARCH" == "arm64" ]]; then
-      log_info "🔄 Setting up QEMU for ARM64 emulation..."
-      sudo mkdir -p "$CHROOT_DIR/usr/bin"
-      sudo cp /usr/bin/qemu-aarch64-static "$CHROOT_DIR/usr/bin/" || {
-        log_error "❌ Failed to copy qemu-aarch64-static. Is qemu-user-static installed?"
-        exit 1
-      }
-    fi
+    # Complete second stage of debootstrap
+    log_info "🔄 Running second stage of debootstrap..."
+    sudo chroot "$CHROOT_DIR" /debootstrap/debootstrap --second-stage
     
+    # Update apt sources
+    echo "deb http://deb.debian.org/debian $DISTRO main" | sudo tee "$CHROOT_DIR/etc/apt/sources.list"
+  else
+    # For native architecture, proceed normally
     sudo debootstrap --arch=$DEB_ARCH $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
   fi
-
-  log_info "🔧 Setting up locale..."
-  sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y locales && locale-gen en_US.UTF-8"
 
   log_info "🔗 Mounting project..."
   sudo mkdir -p "$CHROOT_DIR/mnt/project"
@@ -145,27 +140,50 @@ for TARGET in "${!TARGETS[@]}"; do
   esac
 
   log_info "⚙️ Running build inside chroot..."
-  sudo chroot "$CHROOT_DIR" /tmp/build_inside.sh "$TARGET"
+  sudo chroot "$CHROOT_DIR" bash -c "/tmp/build_inside.sh $TARGET"
   BUILD_STATUS=$?
   if [[ $BUILD_STATUS -ne 0 ]]; then
     log_error "❌ Build failed for target: $TARGET"
     exit $BUILD_STATUS
   fi
 
-  if [[ $DEBUG_MODE -eq 0 ]]; then
-    log_info "🧹 Cleaning up mount..."
-    sudo umount -l "$CHROOT_DIR/mnt/project"
-    sync && sleep 1
-  else
-    log_warn "🐞 Debug mode: Skipping mount unmount"
-  fi
+  log_info "🧹 Cleaning up mount..."
+  sudo umount -l "$CHROOT_DIR/mnt/project"
+  sync && sleep 1
 
   log_info "📤 Copying output binary..."
   BIN_NAME="llama-server-$TARGET"
   OUTPUT_DIR="./bin/$TARGET"
   mkdir -p "$OUTPUT_DIR"
-
-  sudo cp "$CHROOT_DIR/mnt/project/build-$TARGET/bin/llama-server" "$OUTPUT_DIR/$BIN_NAME"
+  
+  # Find the server binary - could be in different locations
+  SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "llama-server*" -type f -executable 2>/dev/null || echo "")
+  
+  if [[ -z "$SERVER_BIN" ]]; then
+    log_warn "⚠️ Could not find the server binary in build-$TARGET, checking alternatives..."
+    # Check in the typical locations
+    POSSIBLE_PATHS=(
+      "$CHROOT_DIR/mnt/project/build-$TARGET/bin/server"
+      "$CHROOT_DIR/mnt/project/build-$TARGET/server"
+      "$CHROOT_DIR/mnt/project/build-$TARGET/server/llama-server"
+      "$CHROOT_DIR/mnt/project/build-$TARGET/llama-server"
+    )
+    
+    for path in "${POSSIBLE_PATHS[@]}"; do
+      if [[ -f "$path" ]]; then
+        SERVER_BIN="$path"
+        log_info "🔍 Found server binary at: $SERVER_BIN"
+        break
+      fi
+    done
+  fi
+  
+  if [[ -z "$SERVER_BIN" ]]; then
+    log_error "❌ Could not find llama-server binary. Build may have succeeded but binary is missing."
+    exit 1
+  fi
+  
+  sudo cp "$SERVER_BIN" "$OUTPUT_DIR/$BIN_NAME"
   chmod +x "$OUTPUT_DIR/$BIN_NAME"
 
   log_success "📦 Binary available at: $OUTPUT_DIR/$BIN_NAME"
