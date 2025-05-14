@@ -15,14 +15,14 @@ log_error()   { echo -e "${RED}❌ $1${NC}"; }
 
 print_banner() {
   echo -e "\n${BLUE}==============================================="
-  echo "   🧠 Multimodal Coding Lab - Multiarch Build"
+  echo "      🧠 GroupChatLLM - Multiarch Build"
   echo "         Powered by ik_llama.cpp"
   echo "===============================================${NC}\n"
 }
 
 # === CONFIG ===
-CHROOT_DIR="$HOME/multimodal-chroot"
-TARGET_DIR="$HOME/MultimodalCodingLab"
+CHROOT_DIR="$HOME/groupchatllm-chroot"
+TARGET_DIR="$HOME/GroupChatLLM"
 DISTRO="bookworm"
 
 # Map internal targets to Debian architectures
