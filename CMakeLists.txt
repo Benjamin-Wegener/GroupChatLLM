@@ -20,11 +20,6 @@ if(HAS_MARCH_NATIVE)
   add_compile_options(-march=native)
 endif()
 
-# === Optimize for i386 ===
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "i386|i686")
-  add_compile_definitions(GGML_DISABLE_NEON)
-endif()
-
 # === Optional OpenBLAS Acceleration ===
 find_package(OpenBLAS QUIET)
 
