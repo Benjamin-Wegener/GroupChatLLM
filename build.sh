@@ -13,105 +13,73 @@ log_success() { echo -e "${GREEN}✅ $1${NC}"; }
 log_warn()    { echo -e "${YELLOW}⚠️ $1${NC}"; }
 log_error()   { echo -e "${RED}❌ $1${NC}"; }
 
-# === CONFIG ===
-CHROOT_DIR="$HOME/groupchatllm-chroot"
-TARGET_DIR="$HOME/GroupChatLLM"
-DISTRO="bookworm"
-
-declare -A TARGETS=(["cross-aarch64"]="arm64")
-declare -A FRIENDLY_NAMES=(["cross-aarch64"]="ARM64 Linux")
-
-CLEAN_MODE=0
-
-for arg in "$@"; do
-  [[ "$arg" == "--clean" ]] && CLEAN_MODE=1
-done
-
 print_banner() {
   echo -e "\n${BLUE}==============================================="
-  echo "      🧠 GroupChatLLM - Fast Server Build"
-  echo "         Powered by ik_llama.cpp"
+  echo "      🧠 ik_llama.cpp - Bitnet Server Setup"
+  echo "         Native Build | ARM64 Optimized"
   echo "===============================================${NC}\n"
 }
 
-cleanup_previous() {
-  log_info "🔍 Checking for existing mounts..."
-  if mountpoint -q "$CHROOT_DIR/mnt/project"; then
-    log_warn "🧹 Forcing unmount of previous project bind mount..."
-    sudo umount -l "$CHROOT_DIR/mnt/project" || log_error "❌ Failed to unmount"
-    sync && sleep 1
-  fi
-
-  if [[ $CLEAN_MODE -eq 1 && -d "$CHROOT_DIR" ]]; then
-    log_warn "🗑️ Removing old chroot directory: $CHROOT_DIR"
-    sudo rm -rf "$CHROOT_DIR"
-    sync && sleep 1
-  fi
-
-  log_success "✅ Cleanup (if any) completed."
-}
-
-clear
 print_banner
 read -p "🚀 Continue? (y/N) " -n 1 -r
 echo
 [[ ! $REPLY =~ ^[Yy]$ ]] && echo "🚫 Aborted." && exit 1
 
-log_info "🛠️ Installing host tools (debootstrap, qemu)..."
-sudo apt update
-sudo apt install -y debootstrap schroot qemu-user-static binfmt-support
+# === Install Dependencies ===
+log_info "🔧 Installing dependencies..."
+sudo apt update && sudo apt install -y wget cmake git build-essential libopenblas-dev
 
-for TARGET in "${!TARGETS[@]}"; do
-  DEB_ARCH="${TARGETS[$TARGET]}"
-  FRIENDLY_NAME="${FRIENDLY_NAMES[$TARGET]}"
+# === Clone Repository ===
+LLAMA_DIR="$HOME/ik_llama.cpp"
+if [ -d "$LLAMA_DIR" ]; then
+  log_warn "📁 Existing ik_llama.cpp found. Reusing folder."
+else
+  log_info "📂 Cloning ik_llama.cpp repository..."
+  git clone https://github.com/ikawrakow/ik_llama.cpp.git  "$LLAMA_DIR"
+fi
 
-  log_info "🏗️ Building: $TARGET ($FRIENDLY_NAME)"
-  cleanup_previous
+cd "$LLAMA_DIR"
 
-  if [[ ! -d "$CHROOT_DIR" ]]; then
-    log_info "🏡 Creating chroot for $DEB_ARCH..."
-    if [[ "$DEB_ARCH" == "arm64" ]]; then
-      sudo systemctl restart systemd-binfmt.service
-      sudo debootstrap --arch=$DEB_ARCH --foreign $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
-      sudo mkdir -p "$CHROOT_DIR/usr/bin"
-      sudo cp /usr/bin/qemu-aarch64-static "$CHROOT_DIR/usr/bin/"
-      sudo chroot "$CHROOT_DIR" /debootstrap/debootstrap --second-stage
-      echo "deb http://deb.debian.org/debian $DISTRO main" | sudo tee "$CHROOT_DIR/etc/apt/sources.list"
-    else
-      sudo debootstrap --arch=$DEB_ARCH $DISTRO "$CHROOT_DIR" http://deb.debian.org/debian
-    fi
-  fi
+log_info "🔄 Fetching latest changes..."
+git pull origin master
 
-  log_info "🔗 Mounting project..."
-  sudo mkdir -p "$CHROOT_DIR/mnt/project"
-  sudo mount --bind "$TARGET_DIR" "$CHROOT_DIR/mnt/project"
+# === Build Only the Server ===
+log_info "🏗️ Building ik_llama.cpp server..."
 
-  log_info "📦 Installing chroot build dependencies..."
-  sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y crossbuild-essential-arm64 cmake build-essential git libopenblas-dev"
+mkdir -p build
+cd build
 
-  log_info "⚙️ Running build inside chroot..."
-  sudo cp ./chroot_build_inside.sh "$CHROOT_DIR/tmp/build_inside.sh"
-  sudo chmod +x "$CHROOT_DIR/tmp/build_inside.sh"
-  sudo chroot "$CHROOT_DIR" bash -c "/tmp/build_inside.sh $TARGET"
-  BUILD_STATUS=$?
+cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DGGML_CUDA=OFF \
+  -DGGML_BLAS=ON \
+  -DENABLE_SERVER=ON \
+  -DENABLE_CLI=OFF \
+  -DENABLE_TESTS=OFF \
+  -DENABLE_EXAMPLES=OFF \
+  -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16" ..
 
-  if [[ $BUILD_STATUS -ne 0 ]]; then
-    log_error "❌ Build failed for target: $TARGET"
-    exit $BUILD_STATUS
-  fi
+make -j$(nproc)
 
-  read -p "🧹 Unmount and clean chroot? (y/N) " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "🧹 Cleaning up mount..."
-    sudo umount -l "$CHROOT_DIR/mnt/project"
-    sudo umount -l "$CHROOT_DIR/dev"
-    sudo umount -l "$CHROOT_DIR/proc"
-    sudo umount -l "$CHROOT_DIR/sys"
-    log_success "✅ Unmounted and cleaned."
-  else
-    log_warn "⚠️ Chroot left mounted. Clean manually if needed."
-  fi
+log_success "🎉 Build complete!"
 
-  log_success "🎉 Done building for $TARGET"
-done
+# === Download Bitnet Model ===
+MODEL_DIR="$LLAMA_DIR/models"
+MODEL_URL="https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true "
+INPUT_MODEL="$MODEL_DIR/ggml-model-i2_s.gguf"
+OUTPUT_MODEL="$MODEL_DIR/bitnet.gguf"
+
+log_info "🧠 Downloading Bitnet GGUF model..."
+mkdir -p "$MODEL_DIR"
+cd "$MODEL_DIR"
+wget -O "$INPUT_MODEL" "$MODEL_URL"
+
+log_info "⚙️ Requantizing model to iq2_bn_r4 format..."
+cd ..
+./build/bin/llama-quantize --allow-requantize "$INPUT_MODEL" "$OUTPUT_MODEL" iq2_bn_r4
+
+# === Start Server ===
+log_info "⚡ Starting server with MLA mode..."
+./build/bin/llama-server -mla 3 --model "$OUTPUT_MODEL"
+
+log_success "🏁 Done!"
