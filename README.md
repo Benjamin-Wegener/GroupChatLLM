@@ -18,7 +18,7 @@ cd GroupChatLLM/ik_llama.cpp
 cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=OFF
 cmake --build ./build --config Release -j 3
 wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true -O ./models/ggml-model-i2_s.gguf
-./build/bin/llama-quantize --allow-requantize ./models/ggml-model-is_s.gguf ./models/bitnet.gguf iq2_bn_r4
+./build/bin/llama-quantize --allow-requantize ./models/ggml-model-i2_s.gguf ./models/bitnet.gguf iq2_bn_r4
 ./build/bin/llama-server -mla 3 --model ./models/bitnet.gguf
 ```
 
@@ -31,7 +31,7 @@ cd GroupChatLLM/ik_llama.cpp
 cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16"
 cmake --build ./build --config Release -j 3
 wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true -O ./models/ggml-model-i2_s.gguf
-./build/bin/llama-quantize --allow-requantize ./models/ggml-model-is_s.gguf ./models/bitnet.gguf iq2_bn_r4
+./build/bin/llama-quantize --allow-requantize ./models/ggml-model-i2_s.gguf ./models/bitnet.gguf iq2_bn_r4
 ./build/bin/llama-server -mla 3 --model ./models/bitnet.gguf
 ```
 
