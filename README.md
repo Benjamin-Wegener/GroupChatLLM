@@ -5,6 +5,26 @@
 
 ---
 
+## 📦 Installation
+
+To install and build GroupChatLLM, follow these steps:
+
+### 🐧 Linux (Ubuntu/Debian)
+
+```bash
+git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git 
+cd GroupChatLLM
+chmod +x build.sh
+./build.sh
+```
+This will:
+
+Install required system packages
+Clone ik_llama.cpp
+Build the server with ARM64 optimizations if applicable
+Download and requantize a sample GGUF model
+Start the server on port 8080
+👉 For more details, see: build.sh
 ## 🔍 **Overview**  
 A lightweight, AI-powered lab for:  
 - 🌐 Internet research integration (real-time web scraping/APIs)  
@@ -55,27 +75,6 @@ Built with:
 This project uses the [MIT License](https://opensource.org/licenses/MIT) for maximum flexibility .  
 Author: Benjamin Wegener  
 
----
-
-## 🤝 **Contributing**  
-Contributions are welcome!  
-1. Fork the repo  
-2. Create a feature branch (`git checkout -b feature/awesome-stuff`)  
-3. Commit changes (`git commit -m 'Add new model router'`)  
-4. Push to the branch (`git push origin feature/awesome-stuff`)  
-5. Open a pull request  
-
-For major changes, open an issue first to discuss the scope.  
-
-[![](https://img.shields.io/badge/contributions-welcome-brightgreen?style=flat)](issues)  
-
----
-
-### ✨ **Inspiration**  
-- Fancy README templates from [ZQ.Yu](https://github.com/ZQPei)  and [Awesome GitHub README Collection](https://awesome-github-readme-profile.netlify.app) .  
-- Structured documentation principles from [Best-README-Template](https://gitee.com/Best-README-Template) .  
-
----
 
 ### 📚 **References**  
 - `ik_llama.cpp` compilation guide: [llama.cpp GitHub](https://github.com/ggerganov/llama.cpp)  
