@@ -12,7 +12,7 @@ To install and build GroupChatLLM, follow these steps:
 ### 🐧 Linux x64 (Ubuntu/Debian)
 
 ```bash
-SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git pkg-config libopenblas-dev -y
+SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git pkg-config libopenblas-dev ccache -y
 git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git --recursive
 cd GroupChatLLM/ik_llama.cpp
 cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=OFF
@@ -25,7 +25,7 @@ wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-
 ### 🐧 Linux aarch64 (Ubuntu/Debian/Termux/RaspiOS)
 
 ```bash
-SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git pkg-config libopenblas-dev -y
+SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git pkg-config libopenblas-dev ccache -y
 git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git --recursive
 cd GroupChatLLM/ik_llama.cpp
 cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16"
