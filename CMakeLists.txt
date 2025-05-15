@@ -45,6 +45,34 @@ add_compile_options(-include injected_macros.h)
 set(LLAMA_BUILD_SERVER ON CACHE BOOL "Build llama-server" FORCE)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
 
+# Make sure server is built
+option(LLAMA_SERVER_ONLY "Only build the server" OFF)
+if(LLAMA_SERVER_ONLY)
+  set(LLAMA_BUILD_SERVER ON CACHE BOOL "Build llama-server" FORCE)
+  set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
+  set(LLAMA_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
+endif()
+
 # === Add ik_llama.cpp submodule ===
 message(STATUS "🔧 Adding submodule ik_llama.cpp")
 add_subdirectory(ik_llama.cpp)
+
+# === Custom server target ===
+# This is a fallback in case the standard target isn't created
+if(LLAMA_BUILD_SERVER AND NOT TARGET server AND NOT TARGET llama-server)
+  message(STATUS "🔧 Creating custom server target")
+  # Try to find server source files
+  file(GLOB_RECURSE SERVER_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/ik_llama.cpp/server/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ik_llama.cpp/examples/server/*.cpp"
+  )
+  
+  if(SERVER_SOURCES)
+    message(STATUS "Found server sources: ${SERVER_SOURCES}")
+    add_executable(llama-server ${SERVER_SOURCES})
+    target_link_libraries(llama-server PRIVATE llama common)
+    install(TARGETS llama-server RUNTIME DESTINATION bin)
+  else()
+    message(WARNING "⚠️ Could not find server source files")
+  endif()
+endif()
