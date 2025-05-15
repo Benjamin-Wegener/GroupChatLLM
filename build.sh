@@ -125,13 +125,13 @@ for TARGET in "${!TARGETS[@]}"; do
   log_info "📦 Installing dependencies..."
   case "$TARGET" in
     cross-mingw64)
-      sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y mingw-w64 cmake build-essential git"
+      sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y mingw-w64 cmake build-essential git libopenblas-dev"
       ;;
     cross-aarch64)
-      sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y crossbuild-essential-arm64 cmake build-essential git"
+      sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y crossbuild-essential-arm64 cmake build-essential git libopenblas-dev"
       ;;
     native)
-      sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y cmake build-essential git"
+      sudo chroot "$CHROOT_DIR" bash -c "apt update && apt install -y cmake build-essential git libopenblas-dev"
       ;;
     *)
       log_error "❌ Unknown target: $TARGET"
@@ -156,42 +156,37 @@ for TARGET in "${!TARGETS[@]}"; do
   OUTPUT_DIR="./bin/$TARGET"
   mkdir -p "$OUTPUT_DIR"
   
-  # Try more specific server binary locations first with better error handling
-  SERVER_BIN=""
-  POSSIBLE_PATHS=(
-    "$CHROOT_DIR/mnt/project/build-$TARGET/bin/llama-server"
-    "$CHROOT_DIR/mnt/project/build-$TARGET/bin/server"
-    "$CHROOT_DIR/mnt/project/build-$TARGET/server/llama-server"
-    "$CHROOT_DIR/mnt/project/build-$TARGET/server/server"
-  )
+  # Search for server binary more thoroughly
+  log_info "🔍 Searching for server binary..."
   
-  # Check Windows binary path separately
+  # Check all possible locations for the server binary
   if [[ "$TARGET" == "cross-mingw64" ]]; then
-    POSSIBLE_PATHS+=("$CHROOT_DIR/mnt/project/build-$TARGET/bin/llama-server.exe")
+    SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "*server*.exe" -type f 2>/dev/null | head -1)
+  else
+    SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "*server*" -type f -executable 2>/dev/null | grep -v "\.o$" | head -1)
   fi
   
-  # Try to find the binary in the known locations
-  for path in "${POSSIBLE_PATHS[@]}"; do
-    if [[ -f "$path" ]]; then
-      SERVER_BIN="$path"
-      log_info "🔍 Found server binary at: $path"
-      break
-    fi
-  done
-  
-  # If not found in expected locations, do a broader search
   if [[ -z "$SERVER_BIN" ]]; then
-    log_warn "⚠️ Server binary not found in expected locations, performing broader search..."
-    SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "llama-server*" -type f -executable 2>/dev/null || echo "")
-    
-    if [[ -n "$SERVER_BIN" ]]; then
-      log_info "🔍 Found server binary at: $SERVER_BIN"
-    else
-      log_error "❌ Could not find llama-server binary. Build may have succeeded but binary is missing."
-      exit 1
-    fi
+    log_warn "⚠️ Server binary not found. Searching for any llama executable..."
+    # Fallback to any llama executable
+    SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "llama-*" -type f -executable 2>/dev/null | grep -v "\.o$" | head -1)
   fi
   
+  if [[ -z "$SERVER_BIN" ]]; then
+    log_warn "⚠️ Still no binary found. Searching for main executable..."
+    # Last resort: any main executable
+    SERVER_BIN=$(find "$CHROOT_DIR/mnt/project/build-$TARGET" -name "main" -type f -executable 2>/dev/null | head -1)
+  fi
+  
+  if [[ -z "$SERVER_BIN" ]]; then
+    log_error "❌ Could not find any suitable binary. Build may have succeeded but binary is missing."
+    # List all executables for diagnostic purposes
+    echo "Available executables:"
+    find "$CHROOT_DIR/mnt/project/build-$TARGET" -type f -executable 2>/dev/null | sort
+    exit 1
+  fi
+  
+  log_success "✅ Found binary: $SERVER_BIN"
   sudo cp "$SERVER_BIN" "$OUTPUT_DIR/$BIN_NAME"
   sudo chmod +x "$OUTPUT_DIR/$BIN_NAME"
 
