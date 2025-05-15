@@ -15,8 +15,14 @@ rm -rf build-"$TARGET" || true
 mkdir -p build-"$TARGET"
 cd build-"$TARGET"
 
+# Debug: Check the directory structure of the ik_llama.cpp repo
+echo "Checking ik_llama.cpp structure to identify server target..."
+find ../ik_llama.cpp -name "CMakeLists.txt" | xargs grep -l "server" || echo "No server target found in CMakeLists.txt"
+find ../ik_llama.cpp -type d -name "server" || echo "No server directory found"
+
 # Select toolchain and build
-CMAKE_ARGS="-DLLAMA_BUILD_SERVER=ON -DLLAMA_BUILD_EXAMPLES=OFF"
+# Note: We're now using a more comprehensive set of CMAKE_ARGS including explicit server options
+CMAKE_ARGS="-DLLAMA_BUILD_SERVER=ON -DLLAMA_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON"
 
 case "$TARGET" in
   cross-mingw64)
@@ -35,37 +41,57 @@ case "$TARGET" in
     ;;
 esac
 
-make -j$(nproc)
+# Examine generated CMake files to verify server target is correctly configured
+echo "Verifying server target configuration..."
+grep -r "llama-server" . --include="*.make" --include="Makefile" || echo "No llama-server target found in make files"
 
-# Make sure the server actually got built
-echo "Checking for llama-server binary..."
-if [ "$TARGET" = "cross-mingw64" ]; then
-  # Check for Windows executable extension
-  SERVER_PATH="bin/llama-server.exe"
-else
-  SERVER_PATH="bin/llama-server"
+# Build with detailed output
+make -j$(nproc) VERBOSE=1
+
+# Verify what was built - list all executables
+echo "Built executables:"
+find . -type f -executable -not -path "*/\.*" | sort
+
+# Since the server target might have a different name, check for it
+echo "Searching for any server binary..."
+SERVER_CANDIDATES=$(find . -type f -executable -name "*server*" -not -path "*/\.*")
+if [ -n "$SERVER_CANDIDATES" ]; then
+  echo "Found potential server binaries:"
+  echo "$SERVER_CANDIDATES"
+  
+  # Create the bin directory if it doesn't exist
+  mkdir -p bin
+  
+  # Take the first candidate and link it as llama-server
+  FIRST_SERVER=$(echo "$SERVER_CANDIDATES" | head -n 1)
+  echo "Using $FIRST_SERVER as the server binary"
+  cp "$FIRST_SERVER" bin/llama-server
 fi
 
-if [ ! -f "$SERVER_PATH" ]; then
-  echo "Server binary not found at expected path: $SERVER_PATH"
-  # Try building the server specifically
-  echo "Attempting to build server explicitly..."
-  make -j$(nproc) server
-  # List server folder contents for debugging
-  echo "Contents of bin directory:"
-  ls -la bin/
-  # Check alternative paths
-  ALTERNATE_PATHS=("bin/server" "server/llama-server" "server/server")
-  for path in "${ALTERNATE_PATHS[@]}"; do
-    if [ -f "$path" ]; then
-      echo "Found server at: $path"
-      # Create a symlink to ensure it can be found by the expected name
+# If we still don't have a server binary, look for other LLaMA binaries
+if [ ! -f "bin/llama-server" ]; then
+  echo "No server binary found. Looking for other llama executables..."
+  LLAMA_BINS=$(find . -type f -executable -name "llama-*" -not -path "*/\.*")
+  if [ -n "$LLAMA_BINS" ]; then
+    echo "Found llama binaries:"
+    echo "$LLAMA_BINS"
+  else
+    echo "No llama binaries found."
+  fi
+  
+  # As a last resort, try to build the main target directly
+  if [ -f "examples/main/CMakeFiles/main.dir/build.make" ]; then
+    echo "Attempting to build main target directly..."
+    make -j$(nproc) main
+    if [ -f "bin/main" ]; then
+      echo "Built main target, copying as llama-server..."
       mkdir -p bin
-      ln -sf "../$path" "bin/llama-server"
-      break
+      cp bin/main bin/llama-server
     fi
-  done
+  fi
 fi
 
+# List final binary directory contents
 echo "Final bin directory contents:"
-ls -la bin/
+mkdir -p bin
+ls -la bin/ || echo "bin/ directory could not be listed"
