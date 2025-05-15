@@ -9,22 +9,32 @@
 
 To install and build GroupChatLLM, follow these steps:
 
-### 🐧 Linux (Ubuntu/Debian)
+### 🐧 Linux x64 (Ubuntu/Debian)
 
 ```bash
-git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git 
-cd GroupChatLLM
-chmod +x build.sh
-./build.sh
+SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git -y
+git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git --recursive
+cd GroupChatLLM/ik_llama.cpp
+cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON
+cmake --build ./build --config Release -j 3
+wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true -O ./models/ggml-model-i2_s.gguf
+./build/bin/llama-quantize --allow-requantize ./models/ggml-model-is_s.gguf ./models/bitnet.gguf iq2_bn_r4
+./build/bin/llama-server -mla 3 --model ./models/bitnet.gguf
 ```
-This will:
 
-Install required system packages
-Clone ik_llama.cpp
-Build the server with ARM64 optimizations if applicable
-Download and requantize a sample GGUF model
-Start the server on port 8080
-👉 For more details, see: build.sh
+### 🐧 Linux aarch64 (Ubuntu/Debian/Termux/RaspiOS)
+
+```bash
+SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git -y
+git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git --recursive
+cd GroupChatLLM/ik_llama.cpp
+cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16"
+cmake --build ./build --config Release -j 3
+wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true -O ./models/ggml-model-i2_s.gguf
+./build/bin/llama-quantize --allow-requantize ./models/ggml-model-is_s.gguf ./models/bitnet.gguf iq2_bn_r4
+./build/bin/llama-server -mla 3 --model ./models/bitnet.gguf
+```
+
 ## 🔍 **Overview**  
 A lightweight, AI-powered lab for:  
 - 🌐 Internet research integration (real-time web scraping/APIs)  
@@ -75,8 +85,4 @@ Built with:
 This project uses the [MIT License](https://opensource.org/licenses/MIT) for maximum flexibility .  
 Author: Benjamin Wegener  
 
-
-### 📚 **References**  
-- `ik_llama.cpp` compilation guide: [llama.cpp GitHub](https://github.com/ggerganov/llama.cpp)  
-- GGUF model quantization: [Phil Schmid's guide](https://www.philschmid.de/llama-cpp)  
 
