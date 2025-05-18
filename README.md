@@ -15,7 +15,7 @@ To install and build GroupChatLLM, follow these steps:
 SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git pkg-config libopenblas-dev ccache -y
 git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git --recursive
 cd GroupChatLLM/ik_llama.cpp
-cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON
+cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON -DGGML_IQK_FLASH_ATTENTION=OFF
 cmake --build ./build --config Release -j 3
 wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true -O ./models/ggml-model-i2_s.gguf
 ./build/bin/llama-quantize --allow-requantize ./models/ggml-model-i2_s.gguf ./models/bitnet.gguf iq2_bn_r4
@@ -28,7 +28,7 @@ wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-
 SUDO='' ; [ $(id -u) -eq 0 ] || SUDO='sudo' ; $SUDO apt update && $SUDO apt install wget cmake git pkg-config libopenblas-dev ccache -y
 git clone https://github.com/Benjamin-Wegener/GroupChatLLM.git --recursive
 cd GroupChatLLM/ik_llama.cpp
-cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16"
+cmake -B ./build -DGGML_CUDA=OFF -DGGML_BLAS=ON -DGGML_ARCH_FLAGS="-march=armv8.2-a+dotprod+fp16" -DGGML_IQK_FLASH_ATTENTION=OFF
 cmake --build ./build --config Release -j 3
 wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf?download=true -O ./models/ggml-model-i2_s.gguf
 ./build/bin/llama-quantize --allow-requantize ./models/ggml-model-i2_s.gguf ./models/bitnet.gguf iq2_bn_r4
