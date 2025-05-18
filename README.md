@@ -35,6 +35,14 @@ wget https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-
 ./build/bin/llama-server -mla 3 --model ./models/bitnet.gguf
 ```
 
+goto 127.0.0.1:8080 and use 
+```
+<|begin_of_text|>{{prompt}}<|eot_id|>
+{{history}}
+{{char}}:
+```
+as template for the prompt.
+
 ## 🔍 **Overview**  
 A lightweight, AI-powered lab for:  
 - 🌐 Internet research integration (real-time web scraping/APIs)  
